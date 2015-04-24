@@ -67,11 +67,12 @@ def returnText(img):
     print "SAVING IMAGE"
     filename = str(uuid.uuid4())+".jpg"
     cv2.imwrite('img/'+filename, img)
-    payload = {'Script': 'Yes'}
-    files = {'file': open('img/'+filename, 'rb')}
-    response = requests.post(textEndPt, data=payload, files=files)
-    print "TEXT RETRIEVED"
-    return rc(response.text.split('\n'))
+    # payload = {'Script': 'Yes'}
+    # files = {'file': open('img/'+filename, 'rb')}
+    # response = requests.post(textEndPt, data=payload, files=files)
+    # print "TEXT RETRIEVED"
+    # return rc(response.text.split('\n'))
+    return ""
 
 # Initialize imgBytes variable
 imgBytes = ''
@@ -138,10 +139,11 @@ while 1:
 
             # Send (unzoomed) image to word.camera and read text aloud
             imgText = returnText(i)
-            print "TEXT RESULT:"
-            print imgText
-            proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
-            proc.communicate(imgText)
+            # print "TEXT RESULT:"
+            # print imgText
+            # proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
+            # proc.communicate(imgText)
+            sleep(ri(7,15))
 
             # Zoom out and tilt back to horizontal
             ptz(zoom="1", tilt="-180.0")
