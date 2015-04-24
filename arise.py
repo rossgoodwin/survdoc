@@ -17,12 +17,13 @@ from random import choice as rc
 from random import randint as ri
 import requests
 from time import sleep
+import subprocess
 
 # Set camera IP
 CAMERA_IP = "10.0.0.3"
 
-# Open Motion JPG Stream
-stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
+# word.camera API Endpoint
+textEndPt = "https://word.camera/img"
 
 # Pan-Tilt-Zoom API Endpoint
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
@@ -38,6 +39,18 @@ profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xm
 # (**args will load named arguments as a dictionary)
 def ptz(**args):
     return requests.get(controlEndPt, params=args)
+
+# Function to get image text from word.camera API
+def returnText(img):
+    print "UPLOADING IMAGE"
+    payload = {'Script': 'Yes'}
+    files = {'file': img}
+    response = requests.post(textEndPt, data=payload, files=files)
+    print "TEXT RETRIEVED"
+    return response.text.split('\n')[0] # 1st paragraph only
+
+# Open Motion JPG Stream
+stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
 
 # Begin by panning right at speed 3
 ptz(continuouspantiltmove="3,0")
@@ -87,17 +100,24 @@ while 1:
             zoomVal = (imgWidth/w)*ri(30,70) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
-            # Stop panning and zoom in on face
-            ptz(continuouspantiltmove="0,0", areazoom=azVal)
+            # Stop panning
+            ptz(continuouspantiltmove="0,0")
+            # Zoom in on face or profile
+            ptz(areazoom=azVal)
 
-            # Hold zoomed shot for random interval, 7-15 sec
-            sleep(ri(7,15))
+            # Send (unzoomed) image to word.camera and read text aloud
+            imgText = returnText(i)
+            print "TEXT RESULT:"
+            print imgText
+            proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
+            proc.communicate(imgText)
 
             # Zoom out and tilt back to horizontal
             ptz(zoom="1", tilt="-180.0")
             sleep(ri(1,2))
 
-            # If moving right, move left, and vice versa
+            # If previously panning right,
+            # begin panning left (or vice versa)
             if movingRight:
                 ptz(continuouspantiltmove="-3,0")
                 movingRight = False
