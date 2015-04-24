@@ -71,7 +71,7 @@ def returnText(img):
     files = {'file': open('img/'+filename, 'rb')}
     response = requests.post(textEndPt, data=payload, files=files)
     print "TEXT RETRIEVED"
-    return rc(response.text.split('\n'))
+    return rc([p for p in response.text.split('\n') if p])
 
 # Initialize imgBytes variable
 imgBytes = ''
