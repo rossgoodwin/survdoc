@@ -87,10 +87,10 @@ while 1:
 
             # Prioritize face over profile
             if len(faces) > 0:
-                fp = "FACE:\t"
+                fp = "FACE:"
                 x,y,w,h = faces[0]
             elif len(profiles) > 0:
-                fp = "PROFILE:\t"
+                fp = "PROFILE:"
                 x,y,w,h = profiles[0]
 
             # Print face or profile, location, width/height
