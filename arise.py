@@ -32,13 +32,6 @@ textEndPt = "https://word.camera/img"
 # Pan-Tilt-Zoom API Endpoint
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 
-# Initialize imgBytes variable
-imgBytes = ''
-
-# Open Haar Cascade data
-face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
-profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xml')
-
 # Function to make Pan-Tilt-Zoom API requests
 # (**args will load named arguments as a dictionary)
 def ptz(**args):
@@ -52,6 +45,13 @@ def returnText(img):
     response = requests.post(textEndPt, data=payload, files=files)
     print "TEXT RETRIEVED"
     return response.text.split('\n')[0] # 1st paragraph only
+
+# Initialize imgBytes variable
+imgBytes = ''
+
+# Open Haar Cascade data
+face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
+profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xml')
 
 # Open Motion JPG Stream
 stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
