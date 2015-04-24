@@ -34,7 +34,7 @@ textEndPt = "https://word.camera/img"
 # Pan-Tilt-Zoom API Endpoint
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 
-# Function to remove xml character references
+# Function to replace xml character references
 def unescape(text):
     def fixup(m):
         text = m.group(0)
