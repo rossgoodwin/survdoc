@@ -22,6 +22,8 @@ import requests
 from time import sleep
 import subprocess
 from sys import argv
+import re
+import htmlentitydefs
 
 # Get camera IP from argv
 script, CAMERA_IP = argv
@@ -31,6 +33,28 @@ textEndPt = "https://word.camera/img"
 
 # Pan-Tilt-Zoom API Endpoint
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
+
+# Function to remove xml character references
+def unescape(text):
+    def fixup(m):
+        text = m.group(0)
+        if text[:2] == "&#":
+            # character reference
+            try:
+                if text[:3] == "&#x":
+                    return unichr(int(text[3:-1], 16))
+                else:
+                    return unichr(int(text[2:-1]))
+            except ValueError:
+                pass
+        else:
+            # named entity
+            try:
+                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+            except KeyError:
+                pass
+        return text # leave as is
+    return re.sub("&#?\w+;", fixup, text)
 
 # Function to make Pan-Tilt-Zoom API requests
 # (**args will load named arguments as a dictionary)
@@ -44,7 +68,7 @@ def returnText(img):
     files = {'file': img}
     response = requests.post(textEndPt, data=payload, files=files)
     print "TEXT RETRIEVED"
-    return response.text.split('\n')[0] # 1st paragraph only
+    return unescape(response.text.split('\n')[0]) # 1st paragraph only
 
 # Initialize imgBytes variable
 imgBytes = ''
