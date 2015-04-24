@@ -2,6 +2,9 @@
 
 # PERSONIFIED SURVEILLANCE CAMERA
 
+# Usage: 
+# $ python arise.py <CAMERA_IP>
+
 # Python script by Ross Goodwin and Gene Han
 # Made @ ITP (http://itp.nyu.edu), Spring 2015
 # For Axis pan-tilt-zoom surveillance camera
@@ -18,9 +21,10 @@ from random import randint as ri
 import requests
 from time import sleep
 import subprocess
+from sys import argv
 
-# Set camera IP
-CAMERA_IP = "10.0.0.3"
+# Get camera IP from argv
+script, CAMERA_IP = argv
 
 # word.camera API Endpoint
 textEndPt = "https://word.camera/img"
