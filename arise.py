@@ -114,7 +114,7 @@ while 1:
 
             # Zoom out and tilt back to horizontal
             ptz(zoom="1", tilt="-180.0")
-            sleep(ri(1,2))
+            sleep(ri(1,4))
 
             # If previously panning right,
             # begin panning left (or vice versa)
