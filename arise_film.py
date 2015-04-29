@@ -129,7 +129,7 @@ while 1:
             print fp, x, y, w, h
 
             # Area zoom values
-            zoomVal = (imgWidth/w)*ri(30,70) # 100 / zoomVal = portion of screen zoomed
+            zoomVal = (imgWidth/w)*ri(10,40) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
             # Stop panning
