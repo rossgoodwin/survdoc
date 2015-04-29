@@ -63,15 +63,17 @@ def ptz(**args):
     return requests.get(controlEndPt, params=args)
 
 # Function to get image text from word.camera API
-def returnText(img):
+def returnText(img, loc):
     print "SAVING IMAGE"
+    x,y,w,h = loc
+    roi = img[y:y+h, x:x+w]
     filename = str(uuid.uuid4())+".jpg"
-    cv2.imwrite('img/'+filename, img)
+    cv2.imwrite('img/'+filename, roi)
     payload = {'Script': 'Yes'}
     files = {'file': open('img/'+filename, 'rb')}
     response = requests.post(textEndPt, data=payload, files=files)
     print "TEXT RETRIEVED"
-    return rc([p for p in response.text.split('\n') if p])
+    return [p for p in response.text.split('\n') if p]
 
 # Initialize imgBytes variable
 imgBytes = ''
@@ -79,6 +81,7 @@ imgBytes = ''
 # Open Haar Cascade data
 face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xml')
+fullbody_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_fullbody.xml')
 
 # Open Motion JPG Stream
 stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
@@ -90,6 +93,9 @@ ptz(continuouspantiltmove="3,0")
 movingRight = True
 
 # Loop forever
+trigger = 'y'
+trigger = raw_input("> ")
+
 while 1:
 
     # Read images from motion jpg stream
@@ -109,15 +115,23 @@ while 1:
         # Haar Detection
         faces = face_cascade.detectMultiScale(gray, 1.3, 5) # might need additional args: 1.3, 5
         profiles = profile_cascade.detectMultiScale(gray, 1.3, 5)
+        fullbodies = fullbody_cascade.detectMultiScale(gray, 1.3, 5)
 
         # Image size for zoomVal below
         imgHeight, imgWidth = gray.shape[:2]
 
         # PTZ / DO STUFF WITH FACES
-        if len(profiles) > 0 or len(faces) > 0:
-
+        if trigger == 'x' or len(fullbodies) > 0 or len(profiles) > 0 or len(faces) > 0:
             # Prioritize face over profile
-            if len(faces) > 0:
+            if trigger == 'x':
+                x = imgWidth/2
+                y = imgHeight/2
+                w = imgWidth/3
+                h = imgHeight/3
+            elif len(fullbodies) > 0:
+                fp = "BODY:"
+                x,y,w,h = fullbodies[0]
+            elif len(faces) > 0:
                 fp = "FACE:"
                 x,y,w,h = faces[0]
             elif len(profiles) > 0:
@@ -125,10 +139,10 @@ while 1:
                 x,y,w,h = profiles[0]
 
             # Print face or profile, location, width/height
-            print fp, x, y, w, h
+            # print fp, x, y, w, h
 
             # Area zoom values
-            zoomVal = (imgWidth/w)*ri(10,40) # 100 / zoomVal = portion of screen zoomed
+            zoomVal = (imgWidth/w)*ri(40,70) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
             # Stop panning
@@ -137,9 +151,11 @@ while 1:
             ptz(areazoom=azVal)
 
             # Send (unzoomed) image to word.camera and read text aloud
-            imgText = returnText(i)
+            imgTextList = returnText(i,(x,y,w,h))
             print "TEXT RESULT:"
-            print imgText
+            for p in imgTextList:
+                print p
+            imgText = rc(imgTextList)
             proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
             proc.communicate(imgText)
 
@@ -158,6 +174,9 @@ while 1:
 
             # Sleep for random interval, 7-15 sec
             sleep(ri(7,15)) 
+
+            trigger = 'y'
+            trigger = raw_input("> ")
 
         # Reset face and profile lists to empty
         faces = []
