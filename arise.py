@@ -35,6 +35,7 @@ textEndPt = "https://word.camera/img"
 # Pan-Tilt-Zoom API Endpoint
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 
+
 # Function to replace xml character references
 # NOT NEEDED AT THE MOMENT
 #
@@ -58,6 +59,7 @@ controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 #                 pass
 #         return text # leave as is
 #     return re.sub("&#?\w+;", fixup, text)
+
 
 # Function to make Pan-Tilt-Zoom API requests
 # (**args will load named arguments as a dictionary)
