@@ -158,7 +158,7 @@ while 1:
             print "TEXT RESULT:"
             for p in imgTextList:
                 print p
-            imgText = min([p for p in imgTextList], key=lambda x: x.count('#'))
+            imgText = min((p for p in imgTextList), key=lambda x: x.count('#'))
             proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
             proc.communicate(imgText)
 
