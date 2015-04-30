@@ -141,7 +141,7 @@ while 1:
                 fp = "PROFILE:"
                 x,y,w,h = profiles[0]
 
-            Print face or profile, location, width/height
+            # Print face or profile, location, width/height
             print fp, x, y, w, h
 
             # Area zoom values
