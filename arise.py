@@ -64,7 +64,7 @@ controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 def ptz(**args):
     return requests.get(controlEndPt, params=args)
 
-# Function to get image text from word.camera API
+# Function to get zoomed image text from word.camera API
 def returnText(img, loc):
     print "SAVING IMAGE"
     x,y,w,h = loc
@@ -126,6 +126,7 @@ while 1:
         if trigger == 'x' or len(fullbodies) > 0 or len(profiles) > 0 or len(faces) > 0:
             # Prioritize face over profile
             if trigger == 'x':
+                fp = "MANUAL:"
                 x = imgWidth/2
                 y = imgHeight/2
                 w = imgWidth/2
@@ -140,8 +141,8 @@ while 1:
                 fp = "PROFILE:"
                 x,y,w,h = profiles[0]
 
-            # Print face or profile, location, width/height
-            # print fp, x, y, w, h
+            Print face or profile, location, width/height
+            print fp, x, y, w, h
 
             # Area zoom values
             zoomVal = (imgWidth/w)*ri(40,70) # 100 / zoomVal = portion of screen zoomed
@@ -152,7 +153,7 @@ while 1:
             # Zoom in on face or profile
             ptz(areazoom=azVal)
 
-            # Send (unzoomed) image to word.camera and read text aloud
+            # Send zoomed image to word.camera and read text aloud
             imgTextList = returnText(i,(x,y,w,h))
             print "TEXT RESULT:"
             for p in imgTextList:
