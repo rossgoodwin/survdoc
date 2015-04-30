@@ -126,8 +126,8 @@ while 1:
             if trigger == 'x':
                 x = imgWidth/2
                 y = imgHeight/2
-                w = imgWidth/3
-                h = imgHeight/3
+                w = imgWidth/2
+                h = imgHeight/2
             elif len(fullbodies) > 0:
                 fp = "BODY:"
                 x,y,w,h = fullbodies[0]
@@ -155,7 +155,7 @@ while 1:
             print "TEXT RESULT:"
             for p in imgTextList:
                 print p
-            imgText = rc(imgTextList)
+            imgText = min([p for p in imgTextList], key=lambda x: x.count('#'))
             proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
             proc.communicate(imgText)
 
