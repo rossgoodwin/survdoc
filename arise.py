@@ -24,7 +24,7 @@ import subprocess
 from sys import argv
 import re
 import htmlentitydefs
-import uuid
+import time
 
 # Get camera IP from argv
 script, CAMERA_IP = argv
@@ -36,26 +36,28 @@ textEndPt = "https://word.camera/img"
 controlEndPt = "http://"+CAMERA_IP+"/axis-cgi/com/ptz.cgi"
 
 # Function to replace xml character references
-def unescape(text):
-    def fixup(m):
-        text = m.group(0)
-        if text[:2] == "&#":
-            # character reference
-            try:
-                if text[:3] == "&#x":
-                    return unichr(int(text[3:-1], 16))
-                else:
-                    return unichr(int(text[2:-1]))
-            except ValueError:
-                pass
-        else:
-            # named entity
-            try:
-                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
-            except KeyError:
-                pass
-        return text # leave as is
-    return re.sub("&#?\w+;", fixup, text)
+# NOT NEEDED AT THE MOMENT
+#
+# def unescape(text):
+#     def fixup(m):
+#         text = m.group(0)
+#         if text[:2] == "&#":
+#             # character reference
+#             try:
+#                 if text[:3] == "&#x":
+#                     return unichr(int(text[3:-1], 16))
+#                 else:
+#                     return unichr(int(text[2:-1]))
+#             except ValueError:
+#                 pass
+#         else:
+#             # named entity
+#             try:
+#                 text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+#             except KeyError:
+#                 pass
+#         return text # leave as is
+#     return re.sub("&#?\w+;", fixup, text)
 
 # Function to make Pan-Tilt-Zoom API requests
 # (**args will load named arguments as a dictionary)
@@ -67,7 +69,7 @@ def returnText(img, loc):
     print "SAVING IMAGE"
     x,y,w,h = loc
     roi = img[y:y+h, x:x+w]
-    filename = str(uuid.uuid4())+".jpg"
+    filename = str(int(time.time()))+".jpg"
     cv2.imwrite('img/'+filename, roi)
     payload = {'Script': 'Yes'}
     files = {'file': open('img/'+filename, 'rb')}
