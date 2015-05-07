@@ -24,7 +24,7 @@ import subprocess
 from sys import argv
 import re
 import htmlentitydefs
-import uuid
+import time
 
 # Get camera IP from argv
 script, CAMERA_IP = argv
@@ -63,16 +63,30 @@ def ptz(**args):
     return requests.get(controlEndPt, params=args)
 
 # Function to get image text from word.camera API
-def returnText(img):
+def returnText(img, loc):
     print "SAVING IMAGE"
-    filename = str(uuid.uuid4())+".jpg"
-    cv2.imwrite('img/'+filename, img)
-    # payload = {'Script': 'Yes'}
-    # files = {'file': open('img/'+filename, 'rb')}
-    # response = requests.post(textEndPt, data=payload, files=files)
-    # print "TEXT RETRIEVED"
-    # return rc(response.text.split('\n'))
-    return ""
+    x,y,w,h = loc
+    roi = img[y:y+h, x:x+w]
+    filename = str(int(time.time()))+".jpg"
+    cv2.imwrite('img/'+filename, roi)
+    payload = {'Script': 'Yes'}
+    files = {'file': open('img/'+filename, 'rb')}
+    response = requests.post(textEndPt, data=payload, files=files)
+    print "TEXT RETRIEVED"
+    return [p for p in response.text.split('\n') if p]
+
+
+
+# def returnText(img):
+#     print "SAVING IMAGE"
+#     filename = str(uuid.uuid4())+".jpg"
+#     cv2.imwrite('img/'+filename, img)
+#     # payload = {'Script': 'Yes'}
+#     # files = {'file': open('img/'+filename, 'rb')}
+#     # response = requests.post(textEndPt, data=payload, files=files)
+#     # print "TEXT RETRIEVED"
+#     # return rc(response.text.split('\n'))
+#     return ""
 
 # Initialize imgBytes variable
 imgBytes = ''
@@ -80,15 +94,20 @@ imgBytes = ''
 # Open Haar Cascade data
 face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xml')
+fullbody_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_fullbody.xml')
 
 # Open Motion JPG Stream
 stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
 
 # Begin by panning right at speed 3
-ptz(continuouspantiltmove="3,0")
+ptz(continuouspantiltmove="1,0")
 
 # Set movingRight boolean to True
 movingRight = True
+
+# Loop forever
+trigger = 'y'
+trigger = raw_input("> ")
 
 # Loop forever
 while 1:
@@ -107,18 +126,27 @@ while 1:
         # Convert to Grayscale
         gray = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
 
-        # Haar Detection
+         # Haar Detection
         faces = face_cascade.detectMultiScale(gray, 1.3, 5) # might need additional args: 1.3, 5
         profiles = profile_cascade.detectMultiScale(gray, 1.3, 5)
+        fullbodies = fullbody_cascade.detectMultiScale(gray, 1.3, 5)
 
         # Image size for zoomVal below
         imgHeight, imgWidth = gray.shape[:2]
 
         # PTZ / DO STUFF WITH FACES
-        if len(profiles) > 0 or len(faces) > 0:
-
+        if trigger == 'x' or len(fullbodies) > 0 or len(profiles) > 0 or len(faces) > 0:
             # Prioritize face over profile
-            if len(faces) > 0:
+            if trigger == 'x':
+                fp = "MANUAL:"
+                x = 0
+                y = 0
+                w = imgWidth
+                h = imgHeight
+            elif len(fullbodies) > 0:
+                fp = "BODY:"
+                x,y,w,h = fullbodies[0]
+            elif len(faces) > 0:
                 fp = "FACE:"
                 x,y,w,h = faces[0]
             elif len(profiles) > 0:
@@ -129,41 +157,50 @@ while 1:
             print fp, x, y, w, h
 
             # Area zoom values
-            zoomVal = (imgWidth/w)*ri(10,40) # 100 / zoomVal = portion of screen zoomed
+            zoomVal = (imgWidth/w)*ri(70,100) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
             # Stop panning
             ptz(continuouspantiltmove="0,0")
+            # Go To Device Preset 1
+            # ptz(gotodevicepreset="1")
             # Zoom in on face or profile
-            ptz(areazoom=azVal)
+            # ptz(areazoom=azVal)
+            # ptz(center="%s,%s"%(x,y), zoom="9999")
 
-            # Send (unzoomed) image to word.camera and read text aloud
-            imgText = returnText(i)
-            # print "TEXT RESULT:"
-            # print imgText
-            # proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
-            # proc.communicate(imgText)
-            sleep(ri(7,15))
+            # Send zoomed image to word.camera and read text aloud
+            imgTextList = returnText(i,(x,y,w,h))
+            print "TEXT RESULT:"
+            for p in imgTextList:
+                print p
+            imgText = min((p for p in imgTextList), key=lambda x: x.count('#'))
+            proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
+            proc.communicate(imgText)
+
+            sleep(ri(2,5))
 
             # Zoom out and tilt back to horizontal
             ptz(zoom="1", tilt="-180.0")
-            sleep(ri(1,4))
 
             # If previously panning right,
             # begin panning left (or vice versa)
             if movingRight:
-                ptz(continuouspantiltmove="-3,0")
+                ptz(continuouspantiltmove="-1,0")
                 movingRight = False
             else:
-                ptz(continuouspantiltmove="3,0")
+                ptz(continuouspantiltmove="1,0")
                 movingRight = True
 
             # Sleep for random interval, 7-15 sec
-            sleep(ri(7,15)) 
+            # sleep(ri(7,15)) 
+
+            trigger = 'y'
+            trigger = raw_input("> ")
 
         # Reset face and profile lists to empty
         faces = []
         profiles = []
+        fullbodies = []
 
 
         # CODE BELOW WILL DRAW RECTANGLES

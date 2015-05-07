@@ -113,6 +113,9 @@ while 1:
         imgBytes = imgBytes[b+2:]
         i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.CV_LOAD_IMAGE_COLOR)
 
+        # Set device preset
+        ptz(setdevicepreset="1")
+
         # Convert to Grayscale
         gray = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
 
@@ -133,25 +136,27 @@ while 1:
                 y = imgHeight/2
                 w = imgWidth/2
                 h = imgHeight/2
-            elif len(fullbodies) > 0:
-                fp = "BODY:"
-                x,y,w,h = fullbodies[0]
-            elif len(faces) > 0:
-                fp = "FACE:"
-                x,y,w,h = faces[0]
             elif len(profiles) > 0:
                 fp = "PROFILE:"
                 x,y,w,h = profiles[0]
+            elif len(faces) > 0:
+                fp = "FACE:"
+                x,y,w,h = faces[0]
+            elif len(fullbodies) > 0:
+                fp = "BODY:"
+                x,y,w,h = fullbodies[0]
 
             # Print face or profile, location, width/height
             print fp, x, y, w, h
 
             # Area zoom values
-            zoomVal = (imgWidth/w)*ri(40,70) # 100 / zoomVal = portion of screen zoomed
+            zoomVal = (imgWidth/w)*ri(70,100) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
             # Stop panning
             ptz(continuouspantiltmove="0,0")
+            # Go To Device Preset 1
+            ptz(gotodevicepreset="1")
             # Zoom in on face or profile
             ptz(areazoom=azVal)
 
@@ -186,6 +191,7 @@ while 1:
         # Reset face and profile lists to empty
         faces = []
         profiles = []
+        fullbodies = []
 
 
         # CODE BELOW WILL DRAW RECTANGLES
