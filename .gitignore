@@ -1,3 +1,9 @@
+audio/
+img/
+text/
+foobar.py
+cv.py
+cv2.so
 *.pyc
 *.jpg
 test*

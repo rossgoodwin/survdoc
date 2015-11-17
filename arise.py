@@ -22,6 +22,7 @@ import requests
 from time import sleep
 import subprocess
 from sys import argv
+from sys import exit
 import re
 import htmlentitydefs
 import time
@@ -82,6 +83,10 @@ def returnText(img, loc):
 # Initialize imgBytes variable
 imgBytes = ''
 
+# Initialize failCounter variable
+failCounter = 0
+successCounter = 0
+
 # Open Haar Cascade data
 face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
 profile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_profileface.xml')
@@ -91,30 +96,61 @@ fullbody_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_fullbody.xml'
 stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
 
 # Begin by panning right at speed 3
+ptz(zoom="1", tilt="-180.0")
 ptz(continuouspantiltmove="3,0")
 
 # Set movingRight boolean to True
 movingRight = True
 
 # Loop forever
-trigger = 'y'
-trigger = raw_input("> ")
+# trigger = 'y'
+# trigger = raw_input("> ")
 
 while 1:
+    # THIS LINE ASSUMES BASH SCRIPT
+    # WILL RESTART ON EXIT
+    if failCounter > 4:
+        exit(1)
+
+    if successCounter > 0:
+        exit(1)
+
+    # try:
+
+    # Reset face and profile lists to empty
+    faces = []
+    profiles = []
+    fullbodies = []
 
     # Read images from motion jpg stream
     # This code via: 
     # http://stackoverflow.com/questions/21702477/how-to-parse-mjpeg-http-stream-from-ip-camera
-    imgBytes+=stream.read(1024)
-    a = imgBytes.find('\xff\xd8')
-    b = imgBytes.find('\xff\xd9')
-    if a!=-1 and b!=-1:
-        jpg = imgBytes[a:b+2]
-        imgBytes = imgBytes[b+2:]
-        i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.CV_LOAD_IMAGE_COLOR)
 
+    try:
+        imgBytes += stream.read(1024)
+    except:
+        failCounter += 1
+        imgBytes = ''
+        a = -1
+        b = -1
+        try:
+            stream = urllib.urlopen('http://'+CAMERA_IP+'/mjpg/video.mjpg')
+        except:
+            exit(1)
+    else:
+        a = imgBytes.find('\xff\xd8')
+        b = imgBytes.find('\xff\xd9')
+
+    if a != -1 and b != -1:
         # Set device preset
-        ptz(setdevicepreset="1")
+        # ptz(setdevicepreset="1")
+
+        jpg = imgBytes[a:b+2]
+
+        imgBytes = imgBytes[b+2:]
+        # imgBytes = ''
+
+        i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.CV_LOAD_IMAGE_COLOR)
 
         # Convert to Grayscale
         gray = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
@@ -124,24 +160,41 @@ while 1:
         profiles = profile_cascade.detectMultiScale(gray, 1.3, 5)
         fullbodies = fullbody_cascade.detectMultiScale(gray, 1.3, 5)
 
+        # CODE BELOW WILL DRAW RECTANGLES
+        # OVER FACES/PROFILES AND SHOW 
+        # MOTION JPG IMAGE STREAM
+        # RESULT. UNCOMMENT TO DEBUG 
+        # FACE AND PROFILE DETECTION...
+
+        # for (x,y,w,h) in faces:
+        #     print "FACE:\t", x, y, w, h
+        #     cv2.rectangle(i,(x,y),(x+w,y+h),(255,0,0),2)
+        # for (x,y,w,h) in profiles:
+        #     print "PROFILE:\t", x, y, w, h
+        #     cv2.rectangle(i,(x,y),(x+w,y+h),(0,255,0),2)
+        # cv2.imshow('i',i)
+
         # Image size for zoomVal below
         imgHeight, imgWidth = gray.shape[:2]
 
         # PTZ / DO STUFF WITH FACES
-        if trigger == 'x' or len(fullbodies) > 0 or len(profiles) > 0 or len(faces) > 0:
-            # Prioritize face over profile
-            if trigger == 'x':
-                fp = "MANUAL:"
-                x = imgWidth/2
-                y = imgHeight/2
-                w = imgWidth/2
-                h = imgHeight/2
+        if len(profiles) + len(faces) + len(fullbodies):
+
+            successCounter += 1
+
+            # if trigger == 'x':
+            #     fp = "MANUAL:"
+            #     x = 0
+            #     y = 0
+            #     w = imgWidth
+            #     h = imgHeight
+
+            if len(faces) > 0:
+                fp = "FACE:"
+                x,y,w,h = faces[0]
             elif len(profiles) > 0:
                 fp = "PROFILE:"
                 x,y,w,h = profiles[0]
-            elif len(faces) > 0:
-                fp = "FACE:"
-                x,y,w,h = faces[0]
             elif len(fullbodies) > 0:
                 fp = "BODY:"
                 x,y,w,h = fullbodies[0]
@@ -150,13 +203,13 @@ while 1:
             print fp, x, y, w, h
 
             # Area zoom values
-            zoomVal = (imgWidth/w)*ri(70,100) # 100 / zoomVal = portion of screen zoomed
+            zoomVal = (imgWidth/w)*ri(10,30) # 100 / zoomVal = portion of screen zoomed
             azVal = "%i,%i,%i"%(x+w/2,y+h/2,zoomVal)
 
             # Stop panning
             ptz(continuouspantiltmove="0,0")
             # Go To Device Preset 1
-            ptz(gotodevicepreset="1")
+            # ptz(gotodevicepreset="1")
             # Zoom in on face or profile
             ptz(areazoom=azVal)
 
@@ -165,7 +218,7 @@ while 1:
             print "TEXT RESULT:"
             for p in imgTextList:
                 print p
-            imgText = min((p for p in imgTextList), key=lambda x: x.count('#'))
+            imgText = sorted((p for p in imgTextList), key=lambda x: -x.count('#'))[-1]
             proc = subprocess.Popen(["say"], stdin=subprocess.PIPE)
             proc.communicate(imgText)
 
@@ -183,33 +236,20 @@ while 1:
                 movingRight = True
 
             # Sleep for random interval, 7-15 sec
-            sleep(ri(7,15)) 
+            sleep(ri(1,4)) 
 
-            trigger = 'y'
-            trigger = raw_input("> ")
+            # trigger = 'y'
+            # trigger = raw_input("> ")
 
-        # Reset face and profile lists to empty
-        faces = []
-        profiles = []
-        fullbodies = []
+    # except:
 
-
-        # CODE BELOW WILL DRAW RECTANGLES
-        # OVER FACES/PROFILES AND SHOW 
-        # MOTION JPG IMAGE STREAM
-        # RESULT. UNCOMMENT TO DEBUG 
-        # FACE AND PROFILE DETECTION...
-
-        # for (x,y,w,h) in faces:
-        #     print "FACE:\t", x, y, w, h
-        #     cv2.rectangle(i,(x,y),(x+w,y+h),(255,0,0),2)
-        # for (x,y,w,h) in profiles:
-        #     print "PROFILE:\t", x, y, w, h
-        #     cv2.rectangle(i,(x,y),(x+w,y+h),(0,255,0),2)
-        # cv2.imshow('i',i)
+    #     imgBytes = ''
+    #     faces = []
+    #     profiles = []
+    #     fullbodies = []
 
 
-        # Exit program on fatal error... (?)
-        # (from Stack Overflow code)
-        if cv2.waitKey(1) == 27:
-            exit(0)
+            # Exit program on fatal error... (?)
+            # (from Stack Overflow code)
+            # if cv2.waitKey(1) == 27:
+            #     exit(0)
